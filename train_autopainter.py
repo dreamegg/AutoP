@@ -20,7 +20,7 @@ import math
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--input_dir",  default = "toon_src", help="path to folder containing images")
-parser.add_argument("--mode", default = "train", choices=["train", "test", "export"])
+parser.add_argument("--target_dir",  default = "toon_target", help="path to folder containing images")
 parser.add_argument("--output_dir", default = "toon_out", help="where to put output files")
 parser.add_argument("--seed", type=int)
 parser.add_argument("--checkpoint", default=None, help="directory with checkpoint to resume training from or use for testing")
