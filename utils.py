@@ -184,13 +184,13 @@ def load_examples(input_dir, target_dir, scale_size, batch_size):
     decode = tf.image.decode_png
 
     with tf.name_scope("load_images"):
-        path_queue = tf.train.string_input_producer(input_paths, shuffle=True)
+        path_queue = tf.train.string_input_producer(input_paths, shuffle=False)
         reader = tf.WholeFileReader()
         paths, contents = reader.read(path_queue)
         raw_input = decode(contents)
         raw_input = tf.image.convert_image_dtype(raw_input, dtype=tf.float32)
 
-        path_queue_t = tf.train.string_input_producer(target_paths, shuffle=True)
+        path_queue_t = tf.train.string_input_producer(target_paths, shuffle=False)
         paths_t, contents_t = reader.read(path_queue)
         raw_target = decode(contents_t)
         raw_target = tf.image.convert_image_dtype(raw_target, dtype=tf.float32)

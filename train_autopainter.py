@@ -23,7 +23,6 @@ parser.add_argument("--input_dir",  default = "src_input", help="path to folder 
 parser.add_argument("--target_dir",  default = "src_target", help="path to folder containing images")
 parser.add_argument("--output_dir", default = "toon_out", help="where to put output files")
 parser.add_argument("--seed", type=int)
-parser.add_argument("--checkpoint", default=None, help="directory with checkpoint to resume training from or use for testing")
 
 parser.add_argument("--max_steps", type=int, help="number of training steps (0 to disable)")
 parser.add_argument("--max_epochs", type=int, default = 2000, help="number of training epochs")
@@ -194,8 +193,8 @@ with sv.managed_session() as sess:
     print("parameter_count =", sess.run(parameter_count))
 
     print("loading model from checkpoint")
-    #checkpoint = tf.train.latest_checkpoint(a.checkpoint)
-    #saver.restore(sess, checkpoint)
+    checkpoint = tf.train.latest_checkpoint(a.output_dir)
+    saver.restore(sess, checkpoint)
 
     max_steps = 2**32
     if a.max_epochs is not None:
