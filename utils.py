@@ -8,7 +8,7 @@ import collections
 
 CROP_SIZE = 256
 
-Examples = collections.namedtuple("Examples", "paths, inputs, targets, count, steps_per_epoch")
+Examples = collections.namedtuple("Examples", "inputs, targets, count, steps_per_epoch")
 
 def convert(image, aspect_ratio):
     if aspect_ratio != 1.0:
@@ -151,8 +151,7 @@ def transform(image,scale_size, seed):
     elif scale_size < CROP_SIZE:
         raise Exception("scale size cannot be less than crop size")
     return r
-
-def load_examples(input_dir, scale_size, batch_size):
+def listup_path(input_dir)  :
     if input_dir is None or not os.path.exists(input_dir):
         raise Exception("input_dir does not exist")
 
@@ -176,6 +175,14 @@ def load_examples(input_dir, scale_size, batch_size):
     else:
         input_paths = sorted(input_paths)
 
+    return input_paths
+
+def load_examples(input_dir, target_dir, scale_size, batch_size):
+    input_paths = listup_path(input_dir)
+    target_paths = listup_path(target_dir)
+
+    decode = tf.image.decode_png
+
     with tf.name_scope("load_images"):
         path_queue = tf.train.string_input_producer(input_paths, shuffle=True)
         reader = tf.WholeFileReader()
@@ -183,18 +190,22 @@ def load_examples(input_dir, scale_size, batch_size):
         raw_input = decode(contents)
         raw_input = tf.image.convert_image_dtype(raw_input, dtype=tf.float32)
 
+        path_queue_t = tf.train.string_input_producer(target_paths, shuffle=True)
+        paths_t, contents_t = reader.read(path_queue)
+        raw_target = decode(contents_t)
+        raw_target = tf.image.convert_image_dtype(raw_target, dtype=tf.float32)
+
         assertion = tf.assert_equal(tf.shape(raw_input)[2], 3, message="image does not have 3 channels")
         with tf.control_dependencies([assertion]):
             raw_input = tf.identity(raw_input)
 
         raw_input.set_shape([None, None, 3])
+        raw_target.set_shape([None, None, 3])
 
-        # load color and brightness from image, no B image exists here
-        lab = rgb_to_lab(raw_input)
-        L_chan, a_chan, b_chan = preprocess_lab(lab)
-        a_images = tf.expand_dims(L_chan, axis=2)
-        b_images = tf.stack([a_chan, b_chan], axis=2)
-
+        # break apart image pair and move to range [-1, 1]
+        width = tf.shape(raw_input)[1] # [height, width, channels]
+        a_images = raw_input
+        b_images = raw_target
 
     inputs, targets = [a_images, b_images]
 
@@ -208,11 +219,12 @@ def load_examples(input_dir, scale_size, batch_size):
     with tf.name_scope("target_images"):
         target_images = transform(targets, scale_size, seed)
 
-    paths_batch, inputs_batch, targets_batch = tf.train.batch([paths, input_images, target_images], batch_size=batch_size)
+    #paths_batch, inputs_batch, targets_batch = tf.train.batch([paths, input_images, target_images], batch_size=batch_size)
+    inputs_batch, targets_batch = tf.train.batch([input_images, target_images],batch_size=batch_size)
     steps_per_epoch = int(math.ceil(len(input_paths) / batch_size))
 
     return Examples(
-        paths=paths_batch,
+        #paths=paths_batch,
         inputs=inputs_batch,
         targets=targets_batch,
         count=len(input_paths),

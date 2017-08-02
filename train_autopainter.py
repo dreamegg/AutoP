@@ -19,8 +19,8 @@ import math
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--input_dir",  default = "toon_src", help="path to folder containing images")
-parser.add_argument("--target_dir",  default = "toon_target", help="path to folder containing images")
+parser.add_argument("--input_dir",  default = "src_input", help="path to folder containing images")
+parser.add_argument("--target_dir",  default = "src_target", help="path to folder containing images")
 parser.add_argument("--output_dir", default = "toon_out", help="where to put output files")
 parser.add_argument("--seed", type=int)
 parser.add_argument("--checkpoint", default=None, help="directory with checkpoint to resume training from or use for testing")
@@ -128,28 +128,16 @@ for k, v in a._get_kwargs():
 with open(os.path.join(a.output_dir, "options.json"), "w") as f:
     f.write(json.dumps(vars(a), sort_keys=True, indent=4))
 
-examples = load_examples(a.input_dir, a.scale_size, a.batch_size)
+examples = load_examples(a.input_dir, a.target_dir, a.scale_size, a.batch_size)
 print("examples count = %d" % examples.count)
 
 # inputs and targets are [batch_size, height, width, channels]
 model = create_model(examples.inputs, examples.targets)
 
 # colorization splitting on images that we use for display/output
-if a.which_direction == "AtoB":
-    # inputs is brightness, this will be handled fine as a grayscale image
-    # need to augment targets and outputs with brightness
-    targets = augment(examples.targets, examples.inputs)
-    outputs = augment(model.outputs, examples.inputs)
-    # inputs can be deprocessed normally and handled as if they are single channel
-    # grayscale images
-    inputs = deprocess(examples.inputs)
-elif a.which_direction == "BtoA":
-    # inputs will be color channels only, get brightness from targets
-    inputs = augment(examples.inputs, examples.targets)
-    targets = deprocess(examples.targets)
-    outputs = deprocess(model.outputs)
-else:
-    raise Exception("invalid direction")
+inputs = deprocess(examples.inputs)
+targets = deprocess(examples.targets)
+outputs = deprocess(model.outputs)
 
 # reverse any processing on images so they can be written to disk or displayed to user
 with tf.name_scope("convert_inputs"):
@@ -163,7 +151,7 @@ with tf.name_scope("convert_outputs"):
 
 with tf.name_scope("encode_images"):
     display_fetches = {
-        "paths": examples.paths,
+        #"paths": examples.paths,
         "inputs": tf.map_fn(tf.image.encode_png, converted_inputs, dtype=tf.string, name="input_pngs"),
         "targets": tf.map_fn(tf.image.encode_png, converted_targets, dtype=tf.string, name="target_pngs"),
         "outputs": tf.map_fn(tf.image.encode_png, converted_outputs, dtype=tf.string, name="output_pngs"),
