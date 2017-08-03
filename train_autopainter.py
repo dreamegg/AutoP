@@ -36,7 +36,6 @@ parser.add_argument("--trace_freq", type=int, default=0, help="trace execution e
 parser.add_argument("--display_freq", type=int, default=0, help="write current training images every display_freq steps")
 parser.add_argument("--save_freq", type=int, default=5000, help="save model every save_freq steps, 0 to disable")
 
-
 parser.set_defaults(flip=True)
 
 # export options
