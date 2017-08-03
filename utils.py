@@ -8,7 +8,13 @@ import collections
 
 CROP_SIZE = 256
 
-Examples = collections.namedtuple("Examples", "inputs, targets, count, steps_per_epoch")
+#Examples = collections.namedtuple("Examples", "inputs, targets, count, steps_per_epoch")
+Examples = collections.namedtuple("Examples", "paths, inputs, targets, count, steps_per_epoch")
+
+def deprocess(image):
+    with tf.name_scope("deprocess"):
+        # [-1, 1] => [0, 1]
+        return (image + 1) / 2
 
 def convert(image, aspect_ratio):
     if aspect_ratio != 1.0:
@@ -219,12 +225,12 @@ def load_examples(input_dir, target_dir, scale_size, batch_size):
     with tf.name_scope("target_images"):
         target_images = transform(targets, scale_size, seed)
 
-    #paths_batch, inputs_batch, targets_batch = tf.train.batch([paths, input_images, target_images], batch_size=batch_size)
+    paths_batch, inputs_batch, targets_batch = tf.train.batch([paths, input_images, target_images], batch_size=batch_size)
     inputs_batch, targets_batch = tf.train.batch([input_images, target_images],batch_size=batch_size)
     steps_per_epoch = int(math.ceil(len(input_paths) / batch_size))
 
     return Examples(
-        #paths=paths_batch,
+        paths=paths_batch,
         inputs=inputs_batch,
         targets=targets_batch,
         count=len(input_paths),

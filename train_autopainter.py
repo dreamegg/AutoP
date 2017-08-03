@@ -5,6 +5,7 @@ from __future__ import print_function
 from utils import load_examples
 from utils import augment
 from utils import convert
+from utils import deprocess
 from model import create_model
 
 import tensorflow as tf
@@ -36,8 +37,6 @@ parser.add_argument("--aspect_ratio", type=float, default=1.0, help="aspect rati
 parser.add_argument("--lab_colorization", action="store_true", help="split input image into brightness (A) and color (B)")
 parser.add_argument("--batch_size", type=int, default=1, help="number of images in batch")
 parser.add_argument("--which_direction", type=str, default="AtoB", choices=["AtoB", "BtoA"])
-#parser.add_argument("--ngf", type=int, default=64, help="number of generator filters in first conv layer")
-#parser.add_argument("--ndf", type=int, default=64, help="number of discriminator filters in first conv layer")
 parser.add_argument("--scale_size", type=int, default=286, help="scale images to this size before cropping to 256x256")
 parser.add_argument("--flip", dest="flip", action="store_true", help="flip images horizontally")
 parser.add_argument("--no_flip", dest="flip", action="store_false", help="don't flip images horizontally")
@@ -53,12 +52,6 @@ def preprocess(image):
     with tf.name_scope("preprocess"):
         # [0, 1] => [-1, 1]
         return image * 2 - 1
-
-
-def deprocess(image):
-    with tf.name_scope("deprocess"):
-        # [-1, 1] => [0, 1]
-        return (image + 1) / 2
 
 
 def save_images(fetches, step=None):
@@ -194,7 +187,7 @@ with sv.managed_session() as sess:
 
     print("loading model from checkpoint")
     checkpoint = tf.train.latest_checkpoint(a.output_dir)
-    saver.restore(sess, checkpoint)
+    if ( checkpoint != None ) : saver.restore(sess, checkpoint)
 
     max_steps = 2**32
     if a.max_epochs is not None:
