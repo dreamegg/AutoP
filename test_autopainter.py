@@ -23,7 +23,6 @@ parser.add_argument("--test_input_dir",  default = "test_input", help="path to f
 parser.add_argument("--target_dir",  default = "src_target", help="path to folder containing images")
 parser.add_argument("--output_dir", default = "toon_out", help="where to put output files")
 parser.add_argument("--seed", type=int)
-parser.add_argument("--checkpoint", default=None, help="directory with checkpoint to resume training from or use for testing")
 
 parser.add_argument("--max_steps", type=int, help="number of training steps (0 to disable)")
 parser.add_argument("--max_epochs", type=int, default = 2000, help="number of training epochs")
@@ -34,21 +33,11 @@ parser.add_argument("--display_freq", type=int, default=0, help="write current t
 parser.add_argument("--save_freq", type=int, default=5000, help="save model every save_freq steps, 0 to disable")
 
 parser.add_argument("--aspect_ratio", type=float, default=1.0, help="aspect ratio of output images (width/height)")
-parser.add_argument("--lab_colorization", action="store_true", help="split input image into brightness (A) and color (B)")
 parser.add_argument("--batch_size", type=int, default=1, help="number of images in batch")
-parser.add_argument("--which_direction", type=str, default="AtoB", choices=["AtoB", "BtoA"])
-#parser.add_argument("--ngf", type=int, default=64, help="number of generator filters in first conv layer")
-#parser.add_argument("--ndf", type=int, default=64, help="number of discriminator filters in first conv layer")
-parser.add_argument("--scale_size", type=int, default=286, help="scale images to this size before cropping to 256x256")
-parser.add_argument("--flip", dest="flip", action="store_true", help="flip images horizontally")
-parser.add_argument("--no_flip", dest="flip", action="store_false", help="don't flip images horizontally")
-parser.set_defaults(flip=True)
 
 # export options
 parser.add_argument("--output_filetype", default="png", choices=["png", "jpeg"])
 a = parser.parse_args()
-
-CROP_SIZE = 256
 
 def save_images(fetches, step=None):
     image_dir = os.path.join(a.output_dir, "images")
@@ -117,9 +106,6 @@ with open(os.path.join(a.output_dir, "options.json")) as f:
         if key in options:
             print("loaded", key, "=", val)
             setattr(a, key, val)
-# disable these features in test mode
-a.scale_size = CROP_SIZE
-a.flip = False
 
 for k, v in a._get_kwargs():
     print(k, "=", v)
@@ -127,12 +113,11 @@ for k, v in a._get_kwargs():
 with open(os.path.join(a.output_dir, "options.json"), "w") as f:
     f.write(json.dumps(vars(a), sort_keys=True, indent=4))
 
-examples = load_examples(a.test_input_dir, a.target_dir, a.scale_size, a.batch_size)
+examples = load_examples(a.test_input_dir, a.target_dir, a.batch_size)
 print("examples count = %d" % examples.count)
 
 # inputs and targets are [batch_size, height, width, channels]
 model = create_model(examples.inputs, examples.targets)
-
 
 inputs = deprocess(examples.inputs)
 targets = deprocess(examples.targets)

@@ -183,7 +183,9 @@ def listup_path(input_dir)  :
 
     return input_paths
 
-def load_examples(input_dir, target_dir, scale_size, batch_size):
+def load_examples(input_dir, target_dir, batch_size):
+    scale_size = CROP_SIZE
+
     input_paths = listup_path(input_dir)
     target_paths = listup_path(target_dir)
 
