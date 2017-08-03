@@ -27,78 +27,20 @@ parser.add_argument("--seed", type=int)
 
 parser.add_argument("--max_steps", type=int, help="number of training steps (0 to disable)")
 parser.add_argument("--max_epochs", type=int, default = 2000, help="number of training epochs")
+parser.add_argument("--aspect_ratio", type=float, default=1.0, help="aspect ratio of output images (width/height)")
+parser.add_argument("--batch_size", type=int, default=1, help="number of images in batch")
+
 parser.add_argument("--summary_freq", type=int, default=100, help="update summaries every summary_freq steps")
 parser.add_argument("--progress_freq", type=int, default=50, help="display progress every progress_freq steps")
 parser.add_argument("--trace_freq", type=int, default=0, help="trace execution every trace_freq steps")
 parser.add_argument("--display_freq", type=int, default=0, help="write current training images every display_freq steps")
 parser.add_argument("--save_freq", type=int, default=5000, help="save model every save_freq steps, 0 to disable")
 
-parser.add_argument("--aspect_ratio", type=float, default=1.0, help="aspect ratio of output images (width/height)")
-parser.add_argument("--lab_colorization", action="store_true", help="split input image into brightness (A) and color (B)")
-parser.add_argument("--batch_size", type=int, default=10, help="number of images in batch")
-parser.add_argument("--which_direction", type=str, default="AtoB", choices=["AtoB", "BtoA"])
-parser.add_argument("--scale_size", type=int, default=286, help="scale images to this size before cropping to 256x256")
-parser.add_argument("--flip", dest="flip", action="store_true", help="flip images horizontally")
-parser.add_argument("--no_flip", dest="flip", action="store_false", help="don't flip images horizontally")
 parser.set_defaults(flip=True)
 
 # export options
 parser.add_argument("--output_filetype", default="png", choices=["png", "jpeg"])
 a = parser.parse_args()
-
-
-
-def preprocess(image):
-    with tf.name_scope("preprocess"):
-        # [0, 1] => [-1, 1]
-        return image * 2 - 1
-
-
-def save_images(fetches, step=None):
-    image_dir = os.path.join(a.output_dir, "images")
-    if not os.path.exists(image_dir):
-        os.makedirs(image_dir)
-
-    filesets = []
-    for i, in_path in enumerate(fetches["paths"]):
-        name, _ = os.path.splitext(os.path.basename(in_path.decode("utf8")))
-        fileset = {"name": name, "step": step}
-        for kind in ["inputs", "outputs", "targets"]:
-            filename = name + "-" + kind + ".png"
-            if step is not None:
-                filename = "%08d-%s" % (step, filename)
-            fileset[kind] = filename
-            out_path = os.path.join(image_dir, filename)
-            contents = fetches[kind][i]
-            with open(out_path, "wb") as f:
-                f.write(contents)
-        filesets.append(fileset)
-    return filesets
-
-
-def append_index(filesets, step=False):
-    index_path = os.path.join(a.output_dir, "index.html")
-    if os.path.exists(index_path):
-        index = open(index_path, "a")
-    else:
-        index = open(index_path, "w")
-        index.write("<html><body><table><tr>")
-        if step:
-            index.write("<th>step</th>")
-        index.write("<th>name</th><th>input</th><th>output</th><th>target</th></tr>")
-
-    for fileset in filesets:
-        index.write("<tr>")
-
-        if step:
-            index.write("<td>%d</td>" % fileset["step"])
-        index.write("<td>%s</td>" % fileset["name"])
-
-        for kind in ["inputs", "outputs", "targets"]:
-            index.write("<td><img src='images/%s'></td>" % fileset[kind])
-
-        index.write("</tr>")
-    return index_path
 
 
 if tf.__version__.split('.')[0] != "1":
@@ -120,7 +62,7 @@ for k, v in a._get_kwargs():
 with open(os.path.join(a.output_dir, "options.json"), "w") as f:
     f.write(json.dumps(vars(a), sort_keys=True, indent=4))
 
-examples = load_examples(a.input_dir, a.target_dir, a.scale_size, a.batch_size)
+examples = load_examples(a.input_dir, a.target_dir, a.batch_size)
 print("examples count = %d" % examples.count)
 
 # inputs and targets are [batch_size, height, width, channels]
@@ -229,11 +171,6 @@ with sv.managed_session() as sess:
         if should(a.summary_freq):
             print("recording summary")
             sv.summary_writer.add_summary(results["summary"], results["global_step"])
-
-        if should(a.display_freq):
-            print("saving display images")
-            filesets = save_images(results["display"], step=results["global_step"])
-            append_index(filesets, step=True)
 
         if should(a.trace_freq):
             print("recording trace")
