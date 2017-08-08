@@ -33,12 +33,14 @@ def preprocess_lab(lab):
         return [L_chan / 50 - 1, a_chan / 110, b_chan / 110]
 
 def check_image(image):
+    '''
     assertion = tf.assert_equal(tf.shape(image)[-1], 3, message="image must have 3 color channels")
     with tf.control_dependencies([assertion]):
         image = tf.identity(image)
 
     if image.get_shape().ndims not in (3, 4):
         raise ValueError("image must be either 3 or 4 dimensions")
+    '''
 
     # make the last dimension 3 so that you can unstack the colors
     shape = list(image.get_shape())
@@ -109,12 +111,12 @@ def load_examples(input_dir, target_dir, batch_size):
         raw_target = decode(contents_t)
         raw_target = tf.image.convert_image_dtype(raw_target, dtype=tf.float32)
 
-        assertion = tf.assert_equal(tf.shape(raw_input)[2], 3, message="image does not have 3 channels")
-        with tf.control_dependencies([assertion]):
-            raw_input = tf.identity(raw_input)
+        #assertion = tf.assert_equal(tf.shape(raw_input)[2], 3, message="image does not have 3 channels")
+        #with tf.control_dependencies([assertion]):
+        #    raw_input = tf.identity(raw_input)
 
-        raw_input.set_shape([None, None, 3])
-        raw_target.set_shape([None, None, 3])
+        raw_input.set_shape([None, None, 1])
+        raw_target.set_shape([None, None, 1])
 
         # break apart image pair and move to range [-1, 1]
         width = tf.shape(raw_input)[1] # [height, width, channels]
