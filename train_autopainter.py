@@ -27,7 +27,7 @@ parser.add_argument("--seed", type=int)
 parser.add_argument("--max_steps", type=int, help="number of training steps (0 to disable)")
 parser.add_argument("--max_epochs", type=int, default = 2000, help="number of training epochs")
 parser.add_argument("--aspect_ratio", type=float, default=1.0, help="aspect ratio of output images (width/height)")
-parser.add_argument("--batch_size", type=int, default=15, help="number of images in batch")
+parser.add_argument("--batch_size", type=int, default=1, help="number of images in batch")
 
 parser.add_argument("--summary_freq", type=int, default=100, help="update summaries every summary_freq steps")
 parser.add_argument("--progress_freq", type=int, default=50, help="display progress every progress_freq steps")
@@ -110,6 +110,7 @@ tf.summary.scalar("discriminator_loss", model.discrim_loss)
 tf.summary.scalar("generator_loss_GAN", model.gen_loss_GAN)
 tf.summary.scalar("generator_loss_L1", model.gen_loss_L1)
 tf.summary.scalar("tv_loss", model.tv_loss)
+tf.summary.scalar("content_loss", model.content_loss)
 for var in tf.trainable_variables():
     tf.summary.histogram(var.op.name + "/values", var)
 
@@ -160,6 +161,7 @@ with sv.managed_session() as sess:
             fetches["gen_loss_GAN"] = model.gen_loss_GAN
             fetches["gen_loss_L1"] = model.gen_loss_L1
             fetches["tv_loss"] = model.tv_loss
+            fetches["content_loss"] = model.content_loss
 
         if should(a.summary_freq):
             fetches["summary"] = sv.summary_op
@@ -188,6 +190,8 @@ with sv.managed_session() as sess:
             print("gen_loss_GAN", results["gen_loss_GAN"])
             print("gen_loss_L1", results["gen_loss_L1"])
             print("tv_loss", results["tv_loss"])
+            print("content_loss", results["content_loss"])
+
 
         if should(a.save_freq):
             print("saving model")

@@ -9,10 +9,8 @@ import vgg
 import transform
 import functools
 
-STYLE_LAYERS = ('relu1_2', 'relu2_2', 'relu3_2', 'relu4_2', 'relu5_2')
 CONTENT_LAYER = 'relu4_2'
-
-VGG_PATH = "VGG_PATH"
+VGG_PATH = 'data/imagenet-vgg-verydeep-19.mat'
 
 ngf = 64
 ndf = 64
@@ -20,12 +18,12 @@ lr = 0.0002
 beta1 = 0.5
 l1_weight = 100.0
 gan_weight =  1.0
-style_weight = 0.01
+content_weight = 0.01
 tv_weight = 0.0001
 EPS = 1e-12
 Model = collections.namedtuple("Model",
                                "outputs, predict_real, predict_fake, discrim_loss, "
-                               "discrim_grads_and_vars, gen_loss_GAN, gen_loss_L1, tv_loss, "
+                               "discrim_grads_and_vars, gen_loss_GAN, gen_loss_L1, tv_loss, content_loss, "
                                "gen_grads_and_vars, train")
 
 def conv(batch_input, out_channels, stride):
@@ -201,46 +199,36 @@ def create_model(inputs, targets):
         # predict_real => 1
         # predict_fake => 0
         discrim_loss = tf.reduce_mean(-(tf.log(predict_real + EPS) + tf.log(1 - predict_fake + EPS)))
-    '''
-        # precompute content features
-        X_pre = vgg.preprocess(outputs)
-    
-        content_features = {}
-        style_features = {}
-    
-        content_net = vgg.net(VGG_PATH, X_pre)
-        content_features[CONTENT_LAYER] = content_net[CONTENT_LAYER]
-    
-        preds = transform.net(outputs / 255.0)
-        preds_pre = vgg.preprocess(preds)
-    
-        net = vgg.net(VGG_PATH, preds_pre)
-    
-        content_size = _tensor_size(content_features[CONTENT_LAYER]) * batch_size
-        assert _tensor_size(content_features[CONTENT_LAYER]) == _tensor_size(net[CONTENT_LAYER])
-        content_loss = content_weight * (2 * tf.nn.l2_loss(
-            net[CONTENT_LAYER] - content_features[CONTENT_LAYER]) / content_size
-                                         )
-    
-        style_losses = []
-        for style_layer in STYLE_LAYERS:
-            layer = net[style_layer]
-            bs, height, width, filters = map(lambda i: i.value, layer.get_shape())
-            feats = tf.reshape(layer, (bs, height * width, filters))
-            feats_T = tf.transpose(feats, perm=[0, 2, 1])
-            grams = tf.matmul(feats_T, feats)
-            style_gram = style_features[style_layer]
-            style_losses.append(2 * tf.nn.l2_loss(grams - style_gram) / style_gram.size)
-    
-        style_loss = style_weight * functools.reduce(tf.add, style_losses) / batch_size
-    '''
+
+
     with tf.name_scope("generator_loss"):
         # predict_fake => 1
         # abs(targets - outputs) => 0
+        # precompute content features
+        X_pre = vgg.preprocess(outputs)
+
+        content_features = {}
+        batch_size = 15
+
+        content_net = vgg.net(VGG_PATH, X_pre)
+        content_features[CONTENT_LAYER] = content_net[CONTENT_LAYER]
+
+        #preds = transform.net(target / 255.0)
+        preds_pre = vgg.preprocess(targets)
+
+        net = vgg.net(VGG_PATH, preds_pre)
+
+        #content_size = _tensor_size(content_features[CONTENT_LAYER]) * batch_size
+        #assert _tensor_size(content_features[CONTENT_LAYER]) == _tensor_size(net[CONTENT_LAYER])
+
+        content_loss = tf.reduce_mean(tf.nn.l2_loss(net[CONTENT_LAYER] - content_features[CONTENT_LAYER]))
+
         gen_loss_GAN = tf.reduce_mean(-tf.log(predict_fake + EPS))
         gen_loss_L1 = tf.reduce_mean(tf.abs(targets - outputs))
-        tv_loss = tf.reduce_sum(tf.image.total_variation(outputs))
-        gen_loss = gen_loss_GAN * gan_weight + gen_loss_L1 * l1_weight + tv_loss * tv_weight
+        tv_loss = tf.reduce_mean(tf.image.total_variation(outputs))
+        gen_loss = gen_loss_GAN * gan_weight + gen_loss_L1 * l1_weight + tv_loss * tv_weight + content_loss * content_weight
+
+
 
     with tf.name_scope("discriminator_train"):
         discrim_tvars = [var for var in tf.trainable_variables() if var.name.startswith("discriminator")]
@@ -256,7 +244,7 @@ def create_model(inputs, targets):
             gen_train = gen_optim.apply_gradients(gen_grads_and_vars)
 
     ema = tf.train.ExponentialMovingAverage(decay=0.99)
-    update_losses = ema.apply([discrim_loss, gen_loss_GAN, gen_loss_L1, tv_loss])
+    update_losses = ema.apply([discrim_loss, gen_loss_GAN, gen_loss_L1, tv_loss, content_loss])
 
     global_step = tf.contrib.framework.get_or_create_global_step()
     incr_global_step = tf.assign(global_step, global_step+1)
@@ -269,6 +257,7 @@ def create_model(inputs, targets):
         gen_loss_GAN=ema.average(gen_loss_GAN),
         gen_loss_L1=ema.average(gen_loss_L1),
         tv_loss=ema.average(tv_loss),
+        content_loss=ema.average(content_loss),
         gen_grads_and_vars=gen_grads_and_vars,
         outputs=outputs,
         train=tf.group(update_losses, incr_global_step, gen_train),
