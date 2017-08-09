@@ -1,35 +1,32 @@
 
 import tensorflow as tf
+import os
+import glob
 import random
 import math
 import collections
-import functools
+import vgg
 import transform
-import vgg, pdb, time
+import functools
 
-#parser.add_argument("--ngf", type=int, default=64, help="number of generator filters in first conv layer")
-#parser.add_argument("--ndf", type=int, default=64, help="number of discriminator filters in first conv layer")
-#parser.add_argument("--lr", type=float, default=0.0002, help="initial learning rate for adam")
-#parser.add_argument("--beta1", type=float, default=0.5, help="momentum term of adam")
-#parser.add_argument("--l1_weight", type=float, default=100.0, help="weight on L1 term for generator gradient")
-#parser.add_argument("--gan_weight", type=float, default=1.0, help="weight on GAN term for generator gradient")
+STYLE_LAYERS = ('relu1_2', 'relu2_2', 'relu3_2', 'relu4_2', 'relu5_2')
+CONTENT_LAYER = 'relu4_2'
+
+VGG_PATH = "VGG_PATH"
 
 ngf = 64
 ndf = 64
-
 lr = 0.0002
 beta1 = 0.5
 l1_weight = 100.0
 gan_weight =  1.0
+style_weight = 0.01
 tv_weight = 0.0001
-
 EPS = 1e-12
-Model = collections.namedtuple("Model", "outputs, predict_real, predict_fake, discrim_loss, discrim_grads_and_vars, gen_loss_GAN, gen_loss_L1, tv_loss, gen_grads_and_vars, train")
-
-
-def _tensor_size(tensor):
-    from operator import mul
-    return functools.reduce(mul, (d.value for d in tensor.get_shape()[1:]), 1)
+Model = collections.namedtuple("Model",
+                               "outputs, predict_real, predict_fake, discrim_loss, "
+                               "discrim_grads_and_vars, gen_loss_GAN, gen_loss_L1, tv_loss, "
+                               "gen_grads_and_vars, train")
 
 def conv(batch_input, out_channels, stride):
     with tf.variable_scope("conv"):
@@ -77,6 +74,9 @@ def deconv(batch_input, out_channels):
         conv = tf.nn.conv2d_transpose(batch_input, filter, [batch, in_height * 2, in_width * 2, out_channels], [1, 2, 2, 1], padding="SAME")
         return conv
 
+def _tensor_size(tensor):
+    from operator import mul
+    return functools.reduce(mul, (d.value for d in tensor.get_shape()[1:]), 1)
 
 def create_generator(generator_inputs, generator_outputs_channels):
     layers = []
@@ -201,18 +201,46 @@ def create_model(inputs, targets):
         # predict_real => 1
         # predict_fake => 0
         discrim_loss = tf.reduce_mean(-(tf.log(predict_real + EPS) + tf.log(1 - predict_fake + EPS)))
-
+    '''
+        # precompute content features
+        X_pre = vgg.preprocess(outputs)
+    
+        content_features = {}
+        style_features = {}
+    
+        content_net = vgg.net(VGG_PATH, X_pre)
+        content_features[CONTENT_LAYER] = content_net[CONTENT_LAYER]
+    
+        preds = transform.net(outputs / 255.0)
+        preds_pre = vgg.preprocess(preds)
+    
+        net = vgg.net(VGG_PATH, preds_pre)
+    
+        content_size = _tensor_size(content_features[CONTENT_LAYER]) * batch_size
+        assert _tensor_size(content_features[CONTENT_LAYER]) == _tensor_size(net[CONTENT_LAYER])
+        content_loss = content_weight * (2 * tf.nn.l2_loss(
+            net[CONTENT_LAYER] - content_features[CONTENT_LAYER]) / content_size
+                                         )
+    
+        style_losses = []
+        for style_layer in STYLE_LAYERS:
+            layer = net[style_layer]
+            bs, height, width, filters = map(lambda i: i.value, layer.get_shape())
+            feats = tf.reshape(layer, (bs, height * width, filters))
+            feats_T = tf.transpose(feats, perm=[0, 2, 1])
+            grams = tf.matmul(feats_T, feats)
+            style_gram = style_features[style_layer]
+            style_losses.append(2 * tf.nn.l2_loss(grams - style_gram) / style_gram.size)
+    
+        style_loss = style_weight * functools.reduce(tf.add, style_losses) / batch_size
+    '''
     with tf.name_scope("generator_loss"):
         # predict_fake => 1
         # abs(targets - outputs) => 0
         gen_loss_GAN = tf.reduce_mean(-tf.log(predict_fake + EPS))
         gen_loss_L1 = tf.reduce_mean(tf.abs(targets - outputs))
-        gen_loss = gen_loss_GAN * gan_weight + gen_loss_L1 * l1_weight
-
-    with tf.name_scope("tv_loss"):
-        # total variation denoising
-        tv_loss = tv_weight * tf.reduce_sum(tf.image.total_variation(targets))
-
+        tv_loss = tf.reduce_sum(tf.image.total_variation(outputs))
+        gen_loss = gen_loss_GAN * gan_weight + gen_loss_L1 * l1_weight + tv_loss * tv_weight
 
     with tf.name_scope("discriminator_train"):
         discrim_tvars = [var for var in tf.trainable_variables() if var.name.startswith("discriminator")]
