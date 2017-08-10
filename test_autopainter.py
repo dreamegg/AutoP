@@ -3,8 +3,6 @@ from __future__ import division
 from __future__ import print_function
 
 from utils import load_examples
-from utils import augment
-from utils import convert
 from utils import deprocess
 from model import create_model
 
