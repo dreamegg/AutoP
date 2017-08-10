@@ -204,31 +204,16 @@ def create_model(inputs, targets):
     with tf.name_scope("generator_loss"):
         # predict_fake => 1
         # abs(targets - outputs) => 0
-        # precompute content features
-        X_pre = vgg.preprocess(outputs)
 
-        content_features = {}
-        batch_size = 15
+        # content features
+        content_net = vgg.net(VGG_PATH, vgg.preprocess(outputs))
+        net = vgg.net(VGG_PATH, vgg.preprocess(targets))
 
-        content_net = vgg.net(VGG_PATH, X_pre)
-        content_features[CONTENT_LAYER] = content_net[CONTENT_LAYER]
-
-        #preds = transform.net(target / 255.0)
-        preds_pre = vgg.preprocess(targets)
-
-        net = vgg.net(VGG_PATH, preds_pre)
-
-        #content_size = _tensor_size(content_features[CONTENT_LAYER]) * batch_size
-        #assert _tensor_size(content_features[CONTENT_LAYER]) == _tensor_size(net[CONTENT_LAYER])
-
-        content_loss = tf.reduce_mean(tf.nn.l2_loss(net[CONTENT_LAYER] - content_features[CONTENT_LAYER]))
-
+        content_loss = tf.reduce_mean(tf.nn.l2_loss(net[CONTENT_LAYER] - content_net[CONTENT_LAYER]))
         gen_loss_GAN = tf.reduce_mean(-tf.log(predict_fake + EPS))
         gen_loss_L1 = tf.reduce_mean(tf.abs(targets - outputs))
         tv_loss = tf.reduce_mean(tf.image.total_variation(outputs))
         gen_loss = gen_loss_GAN * gan_weight + gen_loss_L1 * l1_weight + tv_loss * tv_weight + content_loss * content_weight
-
-
 
     with tf.name_scope("discriminator_train"):
         discrim_tvars = [var for var in tf.trainable_variables() if var.name.startswith("discriminator")]
