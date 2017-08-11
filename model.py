@@ -209,11 +209,11 @@ def create_model(inputs, targets):
         content_net = vgg.net(VGG_PATH, vgg.preprocess(outputs))
         net = vgg.net(VGG_PATH, vgg.preprocess(targets))
 
-        content_loss = tf.reduce_mean(tf.nn.l2_loss(net[CONTENT_LAYER] - content_net[CONTENT_LAYER]))
-        gen_loss_GAN = tf.reduce_mean(-tf.log(predict_fake + EPS))
-        gen_loss_L1 = tf.reduce_mean(tf.abs(targets - outputs))
-        tv_loss = tf.reduce_mean(tf.image.total_variation(outputs))
-        gen_loss = gen_loss_GAN * gan_weight + gen_loss_L1 * l1_weight + tv_loss * tv_weight + content_loss * content_weight
+        content_loss = tf.reduce_mean(tf.nn.l2_loss(net[CONTENT_LAYER] - content_net[CONTENT_LAYER])) * content_weight
+        gen_loss_GAN = tf.reduce_mean(-tf.log(predict_fake + EPS)) * gan_weight
+        gen_loss_L1 = tf.reduce_mean(tf.abs(targets - outputs)) * l1_weight
+        tv_loss = tf.reduce_mean(tf.image.total_variation(outputs)) * tv_weight
+        gen_loss = gen_loss_GAN + gen_loss_L1 + tv_loss + content_loss
 
     with tf.name_scope("discriminator_train"):
         discrim_tvars = [var for var in tf.trainable_variables() if var.name.startswith("discriminator")]
