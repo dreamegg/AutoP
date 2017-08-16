@@ -18,8 +18,8 @@ lr = 0.0002
 beta1 = 0.5
 
 l1_weight = 1.0
-dis_weight = 1
-gan_weight =  10
+dis_weight = 1.0
+gan_weight =  1.0
 content_weight = 1e-10
 tv_weight = 0.00001
 EPS = 1e-12
@@ -98,7 +98,8 @@ def create_generator(generator_inputs, generator_outputs_channels):
 
     for out_channels in layer_specs:
         with tf.variable_scope("encoder_%d" % (len(layers) + 1)):
-            rectified = lrelu(layers[-1], 0.2)
+            #rectified = lrelu(layers[-1], 0.27)
+            rectified = tf.nn.relu(layers[-1])
             # [batch, in_height, in_width, in_channels] => [batch, in_height/2, in_width/2, out_channels]
             convolved = conv(rectified, out_channels, stride=2)
             output = batchnorm(convolved)
@@ -125,10 +126,11 @@ def create_generator(generator_inputs, generator_outputs_channels):
             else:
                 input = tf.concat([layers[-1], layers[skip_layer]], axis=3)
 
-            rectified = tf.nn.relu(input)
+            #rectified = tf.nn.relu(input)
+            rectified = lrelu(input, 0.2)
             # [batch, in_height, in_width, in_channels] => [batch, in_height*2, in_width*2, out_channels]
             output = deconv(rectified, out_channels)
-            output = batchnorm(output)
+            #output = batchnorm(output)
 
             if dropout > 0.0:
                 output = tf.nn.dropout(output, keep_prob=1 - dropout)
@@ -144,7 +146,6 @@ def create_generator(generator_inputs, generator_outputs_channels):
         layers.append(output)
 
     return layers[-1]
-
 
 def create_model(inputs, targets):
     def create_discriminator(discrim_inputs, discrim_targets):
@@ -200,37 +201,22 @@ def create_model(inputs, targets):
         # minimizing -tf.log will try to get inputs to 1
         # predict_real => 1
         # predict_fake => 0
-        discrim_loss = tf.reduce_mean(-(tf.log(predict_real + EPS) + tf.log(1 - predict_fake + EPS))) * dis_weight
+        discrim_loss = tf.reduce_mean(-(tf.log(predict_real + EPS) + tf.log(1 - predict_fake + EPS)))
 
 
     with tf.name_scope("generator_loss"):
         # predict_fake => 1
         # abs(targets - outputs) => 0
-        # precompute content features
-        X_pre = vgg.preprocess(outputs)
 
-        content_features = {}
-        batch_size = 15
+        # content features
+        content_net = vgg.net(VGG_PATH, vgg.preprocess(outputs))
+        net = vgg.net(VGG_PATH, vgg.preprocess(targets))
 
-        content_net = vgg.net(VGG_PATH, X_pre)
-        content_features[CONTENT_LAYER] = content_net[CONTENT_LAYER]
-
-        #preds = transform.net(target / 255.0)
-        preds_pre = vgg.preprocess(targets)
-
-        net = vgg.net(VGG_PATH, preds_pre)
-
-        #content_size = _tensor_size(content_features[CONTENT_LAYER]) * batch_size
-        #assert _tensor_size(content_features[CONTENT_LAYER]) == _tensor_size(net[CONTENT_LAYER])
-
-        content_loss = tf.reduce_mean(tf.nn.l2_loss(net[CONTENT_LAYER] - content_features[CONTENT_LAYER])) * content_weight
-
+        content_loss = tf.reduce_mean(tf.nn.l2_loss(net[CONTENT_LAYER] - content_net[CONTENT_LAYER])) * content_weight
         gen_loss_GAN = tf.reduce_mean(-tf.log(predict_fake + EPS)) * gan_weight
         gen_loss_L1 = tf.reduce_mean(tf.abs(targets - outputs)) * l1_weight
         tv_loss = tf.reduce_mean(tf.image.total_variation(outputs)) * tv_weight
-        gen_loss = gen_loss_GAN + gen_loss_L1+ tv_loss+ content_loss
-
-
+        gen_loss = gen_loss_GAN + gen_loss_L1 + tv_loss + content_loss
 
     with tf.name_scope("discriminator_train"):
         discrim_tvars = [var for var in tf.trainable_variables() if var.name.startswith("discriminator")]
