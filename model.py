@@ -16,10 +16,12 @@ ngf = 64
 ndf = 64
 lr = 0.0002
 beta1 = 0.5
-l1_weight = 100.0
-gan_weight =  1.0
-content_weight = 0.01
-tv_weight = 0.0001
+
+l1_weight = 1.0
+dis_weight = 1
+gan_weight =  10
+content_weight = 1e-10
+tv_weight = 0.00001
 EPS = 1e-12
 Model = collections.namedtuple("Model",
                                "outputs, predict_real, predict_fake, discrim_loss, "
@@ -198,7 +200,7 @@ def create_model(inputs, targets):
         # minimizing -tf.log will try to get inputs to 1
         # predict_real => 1
         # predict_fake => 0
-        discrim_loss = tf.reduce_mean(-(tf.log(predict_real + EPS) + tf.log(1 - predict_fake + EPS)))
+        discrim_loss = tf.reduce_mean(-(tf.log(predict_real + EPS) + tf.log(1 - predict_fake + EPS))) * dis_weight
 
 
     with tf.name_scope("generator_loss"):
@@ -221,12 +223,12 @@ def create_model(inputs, targets):
         #content_size = _tensor_size(content_features[CONTENT_LAYER]) * batch_size
         #assert _tensor_size(content_features[CONTENT_LAYER]) == _tensor_size(net[CONTENT_LAYER])
 
-        content_loss = tf.reduce_mean(tf.nn.l2_loss(net[CONTENT_LAYER] - content_features[CONTENT_LAYER]))
+        content_loss = tf.reduce_mean(tf.nn.l2_loss(net[CONTENT_LAYER] - content_features[CONTENT_LAYER])) * content_weight
 
-        gen_loss_GAN = tf.reduce_mean(-tf.log(predict_fake + EPS))
-        gen_loss_L1 = tf.reduce_mean(tf.abs(targets - outputs))
-        tv_loss = tf.reduce_mean(tf.image.total_variation(outputs))
-        gen_loss = gen_loss_GAN * gan_weight + gen_loss_L1 * l1_weight + tv_loss * tv_weight + content_loss * content_weight
+        gen_loss_GAN = tf.reduce_mean(-tf.log(predict_fake + EPS)) * gan_weight
+        gen_loss_L1 = tf.reduce_mean(tf.abs(targets - outputs)) * l1_weight
+        tv_loss = tf.reduce_mean(tf.image.total_variation(outputs)) * tv_weight
+        gen_loss = gen_loss_GAN + gen_loss_L1+ tv_loss+ content_loss
 
 
 

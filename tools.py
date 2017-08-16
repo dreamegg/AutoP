@@ -71,20 +71,24 @@ def cropping_w(src, up, down):
                         out_src_input = os.path.join(a.src_input, str(outcount) + ".png")
                         out_src_target = os.path.join(a.src_target, str(outcount) + ".png")
                         reszied = cropped.resize((512, 512))
-                        #reszied.save(out_src_input)
+                        reszied.save(out_src_target)
 
                         gray_image = reszied.convert('L')
-                        gray_image.save(out_src_target)
 
-                        edge = gray_image.filter(ImageFilter.GaussianBlur(radius=5))
-                        edge = edge.filter(ImageFilter.FIND_EDGES)
+                        #edge = gray_image.filter(ImageFilter.GaussianBlur(radius=5))
+                        edge = gray_image.filter(ImageFilter.FIND_EDGES)
                         edge = ImageOps.invert(edge)
-                        line = gray_image.point(lambda x: 0 if x < a.threshold else 255, '1')
+                        #edge = edge.point(lambda x: 0 if x < 100 else 255, '1')
+                        #edge = ImageOps.autocontrast(edge, cutoff = 240)
+                        edge = edge.filter(ImageFilter.SMOOTH)
+                        line = gray_image.point(lambda x: 0 if x < 100 else 255, '1')
 
-                        bw = Image.blend(edge,line,0.8)
+                        bw = Image.blend(edge,line,0.7)
+                        bw = bw.convert('RGB')
                         bw.save(out_src_input)
 
                         outcount=outcount+1
+
                     break
                 i = i + 1
         i = i + 1

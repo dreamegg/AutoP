@@ -25,15 +25,15 @@ parser.add_argument("--output_dir", default = "toon_out", help="where to put out
 parser.add_argument("--seed", type=int)
 
 parser.add_argument("--max_steps", type=int, help="number of training steps (0 to disable)")
-parser.add_argument("--max_epochs", type=int, default = 2000, help="number of training epochs")
+parser.add_argument("--max_epochs", type=int, default = 1000, help="number of training epochs")
 parser.add_argument("--aspect_ratio", type=float, default=1.0, help="aspect ratio of output images (width/height)")
-parser.add_argument("--batch_size", type=int, default=1, help="number of images in batch")
+parser.add_argument("--batch_size", type=int, default=25, help="number of images in batch")
 
 parser.add_argument("--summary_freq", type=int, default=100, help="update summaries every summary_freq steps")
 parser.add_argument("--progress_freq", type=int, default=50, help="display progress every progress_freq steps")
 parser.add_argument("--trace_freq", type=int, default=0, help="trace execution every trace_freq steps")
 parser.add_argument("--display_freq", type=int, default=0, help="write current training images every display_freq steps")
-parser.add_argument("--save_freq", type=int, default=5000, help="save model every save_freq steps, 0 to disable")
+parser.add_argument("--save_freq", type=int, default=1000, help="save model every save_freq steps, 0 to disable")
 
 parser.set_defaults(flip=True)
 
@@ -185,7 +185,7 @@ with sv.managed_session() as sess:
             train_step = (results["global_step"] - 1) % examples.steps_per_epoch + 1
             rate = (step + 1) * a.batch_size / (time.time() - start)
             remaining = (max_steps - step) * a.batch_size / rate
-            print("progress  epoch %d  step %d  image/sec %0.1f  remaining %dm" % (train_epoch, train_step, rate, remaining / 60))
+            print("progress  epoch %d  step %d  image/sec %0.1f  remaining %dh" % (train_epoch, train_step, rate, remaining / (60*60)))
             print("discrim_loss", results["discrim_loss"])
             print("gen_loss_GAN", results["gen_loss_GAN"])
             print("gen_loss_L1", results["gen_loss_L1"])

@@ -115,8 +115,8 @@ def load_examples(input_dir, target_dir, batch_size):
         #with tf.control_dependencies([assertion]):
         #    raw_input = tf.identity(raw_input)
 
-        raw_input.set_shape([None, None, 1])
-        raw_target.set_shape([None, None, 1])
+        raw_input.set_shape([None, None, 3])
+        raw_target.set_shape([None, None, 3])
 
         # break apart image pair and move to range [-1, 1]
         width = tf.shape(raw_input)[1] # [height, width, channels]
