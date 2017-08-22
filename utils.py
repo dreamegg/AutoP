@@ -90,6 +90,18 @@ def listup_path(input_dir)  :
 
     return input_paths
 
+def rgb_to_yuv(rgb):
+    with tf.name_scope("rgb_to_yuv"):
+        rgb_pixels = check_image(rgb)
+        #rgb_pixels = tf.reshape(rgb, [-1, 3])
+        print (tf.rank(rgb_pixels))
+        r , g, b= tf.split(rgb_pixels, 3, 1)
+        Y = 0.299 * r + 0.587 * g + 0.114 * b
+        U = 0.492 * (b - Y)
+        V = 0.877 * (r - Y)
+        yuv_pixels = tf.concat([Y, U, V], 2)
+        return tf.reshape(yuv_pixels, tf.shape(rgb))
+
 def load_examples(input_dir, target_dir, batch_size):
     scale_size = CROP_SIZE
 
@@ -105,11 +117,13 @@ def load_examples(input_dir, target_dir, batch_size):
         paths, contents = reader.read(path_queue)
         raw_input = decode(contents)
         raw_input = tf.image.convert_image_dtype(raw_input, dtype=tf.float32)
+        #raw_input = rgb_to_yuv(raw_input)
 
         path_queue_t = tf.train.string_input_producer(target_paths, shuffle=False)
         paths_t, contents_t = reader.read(path_queue_t)
         raw_target = decode(contents_t)
         raw_target = tf.image.convert_image_dtype(raw_target, dtype=tf.float32)
+        #raw_target = rgb_to_yuv(raw_target)
 
         #assertion = tf.assert_equal(tf.shape(raw_input)[2], 3, message="image does not have 3 channels")
         #with tf.control_dependencies([assertion]):

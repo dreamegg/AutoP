@@ -25,8 +25,9 @@ parser.add_argument("--output_dir", default = "toon_out", help="where to put out
 parser.add_argument("--seed", type=int)
 
 parser.add_argument("--max_steps", type=int, help="number of training steps (0 to disable)")
-parser.add_argument("--max_epochs", type=int, default = 1000, help="number of training epochs")
-parser.add_argument("--aspect_ratio", type=float, default=1.0, help="aspect ratio of output images (width/height)")
+parser.add_argument("--max_epochs", type=int, default = 1500, help="number of training epochs")
+parser.add_argument("--aspect_ratio"
+                    , type=float, default=1.0, help="aspect ratio of output images (width/height)")
 parser.add_argument("--batch_size", type=int, default=25, help="number of images in batch")
 
 parser.add_argument("--summary_freq", type=int, default=100, help="update summaries every summary_freq steps")
@@ -114,8 +115,8 @@ tf.summary.scalar("content_loss", model.content_loss)
 for var in tf.trainable_variables():
     tf.summary.histogram(var.op.name + "/values", var)
 
-for grad, var in model.discrim_grads_and_vars + model.gen_grads_and_vars:
-    tf.summary.histogram(var.op.name + "/gradients", grad)
+#for grad, var in model.discrim_grads_and_vars + model.gen_grads_and_vars:
+#    tf.summary.histogram(var.op.name + "/gradients", grad)
 
 with tf.name_scope("parameter_count"):
     parameter_count = tf.reduce_sum([tf.reduce_prod(tf.shape(v)) for v in tf.trainable_variables()])

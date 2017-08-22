@@ -74,8 +74,10 @@ def cropping_w(src, up, down):
                         reszied.save(out_src_target)
 
                         gray_image = reszied.convert('L')
+                        gray_image = gray_image.convert('RGB')
+                        gray_image.save(out_src_input)
 
-                        #edge = gray_image.filter(ImageFilter.GaussianBlur(radius=5))
+                        ''''#edge = gray_image.filter(ImageFilter.GaussianBlur(radius=5))
                         edge = gray_image.filter(ImageFilter.FIND_EDGES)
                         edge = ImageOps.invert(edge)
                         #edge = edge.point(lambda x: 0 if x < 100 else 255, '1')
@@ -86,6 +88,7 @@ def cropping_w(src, up, down):
                         bw = Image.blend(edge,line,0.7)
                         bw = bw.convert('RGB')
                         bw.save(out_src_input)
+                        '''
 
                         outcount=outcount+1
 

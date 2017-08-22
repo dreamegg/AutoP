@@ -1,5 +1,6 @@
 
 import tensorflow as tf
+import tensorflow.contrib.slim as slim
 import os
 import glob
 import random
@@ -16,6 +17,8 @@ ngf = 64
 ndf = 64
 lr = 0.0002
 beta1 = 0.5
+
+Num_ResBlock = 5
 
 l1_weight = 1.0
 dis_weight = 1.0
@@ -38,6 +41,13 @@ def conv(batch_input, out_channels, stride):
         conv = tf.nn.conv2d(padded_input, filter, [1, stride, stride, 1], padding="VALID")
         return conv
 
+def resBlock(x, channels=64, kernel_size=[3, 3], scale=1):
+    with tf.variable_scope("res_block"):
+        tmp = slim.conv2d(x, channels, kernel_size, activation_fn=None)
+        tmp = tf.nn.relu(tmp)
+        tmp = slim.conv2d(tmp, channels, kernel_size, activation_fn=None)
+        tmp *= scale
+        return x + tmp
 
 def lrelu(x, a):
     with tf.name_scope("lrelu"):
@@ -105,6 +115,11 @@ def create_generator(generator_inputs, generator_outputs_channels):
             output = batchnorm(convolved)
             layers.append(output)
 
+    for i in range(Num_ResBlock):
+        resblock = resBlock(layers[-1], out_channels)
+        #output = batchnorm(resblock)
+        layers.append(resblock)
+
     layer_specs = [
         (ngf * 8, 0.5),   # decoder_8: [batch, 1, 1, ngf * 8] => [batch, 2, 2, ngf * 8 * 2]
         (ngf * 8, 0.5),   # decoder_7: [batch, 2, 2, ngf * 8 * 2] => [batch, 4, 4, ngf * 8 * 2]
@@ -117,7 +132,7 @@ def create_generator(generator_inputs, generator_outputs_channels):
 
     num_encoder_layers = len(layers)
     for decoder_layer, (out_channels, dropout) in enumerate(layer_specs):
-        skip_layer = num_encoder_layers - decoder_layer - 1
+        skip_layer = num_encoder_layers - Num_ResBlock - decoder_layer - 1
         with tf.variable_scope("decoder_%d" % (skip_layer + 1)):
             if decoder_layer == 0:
                 # first decoder layer doesn't have skip connections
@@ -172,6 +187,11 @@ def create_model(inputs, targets):
                 normalized = batchnorm(convolved)
                 rectified = lrelu(normalized, 0.2)
                 layers.append(rectified)
+
+        for i in range(Num_ResBlock):
+            resblock = resBlock(layers[-1], out_channels)
+            #output = batchnorm(resblock)
+            layers.append(resblock)
 
         # layer_5: [batch, 31, 31, ndf * 8] => [batch, 30, 30, 1]
         with tf.variable_scope("layer_%d" % (len(layers) + 1)):
