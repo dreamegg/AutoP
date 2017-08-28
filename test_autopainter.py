@@ -4,7 +4,6 @@ from __future__ import print_function
 
 from utils import load_examples
 from utils import convert
-from utils import deprocess
 from model import create_model
 
 import tensorflow as tf
@@ -47,7 +46,7 @@ def save_images(fetches, step=None):
     for i, in_path in enumerate(fetches["paths"]):
         name, _ = os.path.splitext(os.path.basename(in_path.decode("utf8")))
         fileset = {"name": name, "step": step}
-        for kind in ["inputs", "outputs", "targets"]:
+        for kind in ["inputs", "outputs"]:
             filename = name + "-" + kind + ".png"
             if step is not None:
                 filename = "%08d-%s" % (step, filename)
@@ -78,7 +77,7 @@ def append_index(filesets, step=False):
             index.write("<td>%d</td>" % fileset["step"])
         index.write("<td>%s</td>" % fileset["name"])
 
-        for kind in ["inputs", "outputs", "targets"]:
+        for kind in ["inputs", "outputs"]:
             index.write("<td><img src='images/%s'></td>" % fileset[kind])
 
         index.write("</tr>")
@@ -118,9 +117,9 @@ print("examples count = %d" % examples.count)
 # inputs and targets are [batch_size, height, width, channels]
 model = create_model(examples.inputs, examples.targets)
 
-inputs = deprocess(examples.inputs)
-targets = deprocess(examples.targets)
-outputs = deprocess(model.outputs)
+inputs = examples.inputs
+targets = examples.targets
+outputs = model.outputs
 
 def convert(image):
     if a.aspect_ratio != 1.0:

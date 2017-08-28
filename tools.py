@@ -74,10 +74,10 @@ def cropping_w(src, up, down):
                         reszied.save(out_src_target)
 
                         gray_image = reszied.convert('L')
-                        gray_image = gray_image.convert('RGB')
-                        gray_image.save(out_src_input)
+                        #gray_image = gray_image.convert('RGB')
+                        #gray_image.save(out_src_input)
 
-                        ''''#edge = gray_image.filter(ImageFilter.GaussianBlur(radius=5))
+                        #edge = gray_image.filter(ImageFilter.GaussianBlur(radius=5))
                         edge = gray_image.filter(ImageFilter.FIND_EDGES)
                         edge = ImageOps.invert(edge)
                         #edge = edge.point(lambda x: 0 if x < 100 else 255, '1')
@@ -88,7 +88,7 @@ def cropping_w(src, up, down):
                         bw = Image.blend(edge,line,0.7)
                         bw = bw.convert('RGB')
                         bw.save(out_src_input)
-                        '''
+
 
                         outcount=outcount+1
 
@@ -112,7 +112,7 @@ def cropping(src_file, des_path):
                     down_bound = i
                     #print("down ", i, ":", out)
 
-                    if (down_bound - upper_bound ) > 100 : cropping_w(src,upper_bound, down_bound)
+                    if (down_bound - upper_bound ) > 300 : cropping_w(src,upper_bound, down_bound)
                     break
                 i=i+1
         i=i+1
@@ -134,7 +134,7 @@ dst_paths = []
 skipped = 0
 for src_path in os.listdir(a.input_dir):
     name, _ = os.path.splitext(os.path.basename(src_path))
-    src_path = os.path.join(a.input_dir, name + ".png")
+    src_path = os.path.join(a.input_dir, name + ".jpg")
     src_paths.append(src_path)
 
 print("skipping %d files that already exist" % skipped)

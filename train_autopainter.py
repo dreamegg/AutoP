@@ -4,7 +4,6 @@ from __future__ import print_function
 
 from utils import load_examples
 from utils import convert
-from utils import deprocess
 from model import create_model
 
 import tensorflow as tf
@@ -25,10 +24,10 @@ parser.add_argument("--output_dir", default = "toon_out", help="where to put out
 parser.add_argument("--seed", type=int)
 
 parser.add_argument("--max_steps", type=int, help="number of training steps (0 to disable)")
-parser.add_argument("--max_epochs", type=int, default = 1500, help="number of training epochs")
+parser.add_argument("--max_epochs", type=int, default = 2500, help="number of training epochs")
 parser.add_argument("--aspect_ratio"
                     , type=float, default=1.0, help="aspect ratio of output images (width/height)")
-parser.add_argument("--batch_size", type=int, default=25, help="number of images in batch")
+parser.add_argument("--batch_size", type=int, default=20, help="number of images in batch")
 
 parser.add_argument("--summary_freq", type=int, default=100, help="update summaries every summary_freq steps")
 parser.add_argument("--progress_freq", type=int, default=50, help="display progress every progress_freq steps")
@@ -68,10 +67,9 @@ print("examples count = %d" % examples.count)
 # inputs and targets are [batch_size, height, width, channels]
 model = create_model(examples.inputs, examples.targets)
 
-# colorization splitting on images that we use for display/output
-inputs = deprocess(examples.inputs)
-targets = deprocess(examples.targets)
-outputs = deprocess(model.outputs)
+inputs = examples.inputs
+targets = examples.targets
+outputs = model.outputs
 
 # reverse any processing on images so they can be written to disk or displayed to user
 with tf.name_scope("convert_inputs"):

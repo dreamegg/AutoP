@@ -11,11 +11,6 @@ CROP_SIZE = 256
 #Examples = collections.namedtuple("Examples", "inputs, targets, count, steps_per_epoch")
 Examples = collections.namedtuple("Examples", "paths, inputs, targets, count, steps_per_epoch")
 
-def deprocess(image):
-    with tf.name_scope("deprocess"):
-        # [-1, 1] => [0, 1]
-        return (image + 1) / 2
-
 def convert(image, aspect_ratio):
     if aspect_ratio != 1.0:
         # upscale to correct aspect ratio
